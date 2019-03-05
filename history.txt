@@ -1,0 +1,50 @@
+cd..
+set FLASK_APP=twitoff:APP
+flask run
+conda list
+ptyhon
+python
+set FLASK_APP=twitoff:APP
+flask shell
+doskey /HISTORY > history.txt
+flask --version
+python hello.py
+conda deactivate
+conda activate twitoff
+conda list
+python hello.py
+python hello
+dir
+conda deactivate
+conda activate New 
+conda activate NewTwit
+python hello
+python hello.py
+conda deactivate
+cd ..
+dir
+cd clonedTwitOff
+dir
+cd Twitoff
+dri
+dir
+conda activate NewTwit
+FLASK_APP=hello.py flask run
+set FLASK_APP=hello
+flask run
+cd ..
+cd..
+cd TwitOff
+dir
+set FLASK_APP=hello
+flask run
+where flask
+flask --version
+python --version
+conda list
+cd twitoff
+ls
+dir
+set FLASK_APP=twitoff:APP
+flask run
+cd .
