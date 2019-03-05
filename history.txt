@@ -7,25 +7,25 @@ python
 set FLASK_APP=twitoff:APP
 flask shell
 doskey /HISTORY > history.txt
-flask --version
-python hello.py
 conda deactivate
-conda activate twitoff
-conda list
-python hello.py
-python hello
 dir
-conda deactivate
-conda activate New 
-conda activate NewTwit
-python hello
-python hello.py
-conda deactivate
-cd ..
-dir
-cd clonedTwitOff
-dir
-cd Twitoff
+ conda activate twitenv
+set FLASK_APP=twitoff:APP
+flask shell
+set FLASK_APP=twitoff:APP
+flask shell
+set FLASK_APP=twitoff:APP
+flask shell
+doskey /HISTORY > history.txt
+set FLASK_APP=twitoff:APP
+flask shell
+ls twitoff
+dir twitoff
+set FLASK_APP=twitoff:APP
+flask shell
+set FLASK_APP=twitoff:APP
+flask shell
+doskey /HISTORY > history.txt
 dri
 dir
 conda activate NewTwit
