@@ -17,6 +17,14 @@ def create_app():
         users = User.query.all()
         return render_template('base.html', title='Home', users=users)
     
+    # here you should add a decorator @loginrequired to not leave this open!
+    # for only admin users with privilidge to reset database
+    @app.route('/reset')
+    def reset():
+        DB.drop_all()
+        DB.create_all()
+        return render_template('base.html', title='DB Reset!', users=[])
+
     return app
 
 
