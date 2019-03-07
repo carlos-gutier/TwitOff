@@ -1,0 +1,282 @@
+Your domain in tech is data but
+People want something in an app and then see a thing
+Have at least 1 thing in your portfolio like this
+
+What you need in DS today - more flexibility in job market:
+https://veekaybee.github.io/2019/02/13/data-science-is-different/
+
+
+
+.env:
+should be in .git ignore
+should be in root
+
+NOTE:
+The env attribute maps to this config key. 
+This is set by the FLASK_ENV environment variable and may not 
+behave as expected if set in code.
+
+ABOUT TO FIX IT:
+In app.py remove: 
+app.config['ENV'] = config('ENV')
+
+Then in command propt in package/environment:
+pip install python-dotenv
+
+
+environment variable FLASK_APP... we can have it set all the time:
+in .env if you add line FLASK_APP="twitoff" (could add :APP at end)
+
+you can then run by 'flask run' in terminal
+
+
+How to Debug in Error Page:
+when you start the application - in debug mode gives debugger pin
+you can debug in browser once you find an error with pin given
+
+
+
+
+DATA SCIENCE:
+in your environment:
+- pip install scikit-learn # numpy downloads with it
+
+check in environment python:
+- import sklearn
+- import numpy
+
+
+In editor:
+app.py:
+make a fancy route:
+
+under root route
+# decorated twice (it's possible)
+@app.route('/user', methods=['POST']) #post request
+@app.route('/user/<name>', methods=['GET'] # get request
+# we'll add user based on form not based on url parameter
+def user(name=None): # empty message
+  # we want to be able to add new user
+  # but adding a user can fail, user may not exist or account may be private
+  message=''
+  import pdb; pdb.set_trace() # semicolon is to execute 2 statements in 1 step -- import python debugger
+  name = name or request.vaues['user_name'] # if there is a name then name equals name if not equals request 'Post' user_name
+  try:
+     if request.method == 'POST':
+       add_or_update_user(name) # if user added
+       message = 'User {} sucessfully added!'.format(name)
+     tweets = User.query.filter(User.name == name).one().tweets
+     pass
+  except Exception as e: # catching all exceptions to give user less intimidating msg
+     message = 'Error adding {}: {}'.format(name, e)
+     pass
+  return render_template('user.html', title=name, tweets, tweets, message=message)
+
+
+
+SAME AS ABOVE IN app.py BUT COPIED FROM AARON:
+@app.route('/user', methods=['POST'])
+    
+@app.route('/user/<name>', methods=['GET'])
+    
+def user(name=None):
+        
+message = ''
+        
+import pdb; pdb.set_trace()
+        
+# name = name or request.values['user_name']
+        
+try:
+            
+if request.method == 'POST':
+                
+add_or_update_user(name)
+                
+message = 'User {} successfully added!'.format(name)
+            
+tweets = User.query.filter(User.name == name).one().tweets
+        
+except Exception as e:
+            
+message = 'Error adding {}: {}'.format(name, e)
+            
+tweets = []
+        
+return render_template('user.html', title=name, tweets=tweets,
+                               message=message)                              message=message)
+
+
+
+
+
+
+
+ALSO on top of app.py:
+from .twitter import add_or_update_user
+
+
+In twitter.app:
+def add_or_update_user(username):
+
+    """Add or update a user *and* their Tweets, error if no/private user."""
+
+    try:
+
+        twitter_user = TWITTER.get_user(username)
+
+        db_user = (User.query.get(twitter_user.id) or
+
+                   User(id=twitter_user.id, name=username))
+
+        DB.session.add(db_user)
+
+        # We want as many recent non-retweet/reply statuses as we can get
+
+        tweets = twitter_user.timeline(
+
+            count=200, exclude_replies=True, include_rts=False,
+
+            tweet_mode='extended', since_id=db_user.newest_tweet_id)
+
+        if tweets:
+
+            db_user.newest_tweet_id = tweets[0].id
+
+        for tweet in tweets:
+
+            # Get embedding for tweet, and store in db
+
+            embedding = BASILICA.embed_sentence(tweet.full_text,
+
+                                                model='twitter')
+
+
+            db_tweet = Tweet(id=tweet.id, text=tweet.full_text[:500],
+
+                             embedding=embedding)
+            db_user.tweets.append(db_tweet)
+
+            DB.session.add(db_tweet)
+
+    except Exception as e:
+
+        print('Error processing {}: {}'.format(username, e))
+
+        raise e
+
+    else:
+
+        DB.session.commit()
+
+
+
+
+In base.html:
+<!DOCTYPE html>
+<html>
+    
+<head>
+        
+<title>TwitOff - {{ title }}</title>
+        
+<!-- CSS, keywords, metadata goes here -->
+    
+</head>
+
+    
+<body>
+        
+<h1>TwitOff!</h1>
+
+        
+{% block content %}
+        
+<form action="/user" method="post">
+ # form with field to add user
+<input type="text" name="user_name" placeholder="User to add">
+  # field for form          
+<input type="submit" value="Add User">
+  # form button       
+</form>
+        
+{% endblock %}
+    
+</body>
+</html>
+
+
+
+
+
+NEW user.htlm in templates directory, next to base.html --  twitoff/templates/user.html: 
+# passing in a user and their tweets
+
+{% extends "base.html" %}
+{% block content %}
+
+<h2>User: {{ title }}</h2>
+
+<p>{{ message }}</p>
+
+<ul>
+   
+{% for tweet in tweets %}
+   
+<li>{{ tweet.id }} - {{ tweet.text }}</li>
+   
+{% endfor %}
+</ul>
+
+{% endblock %}
+
+
+
+
+
+NEW predict.py:
+# DO MODEL REFINEMENT IN A NOTEBOOK - THEN UPDATE HERE
+`twitoff/predict.py`
+```"""Prediction of Users based on Tweet embeddings."""
+
+import numpy as np
+
+from sklearn.linear_model import LogisticRegression
+
+from .models import User
+
+from .twitter import BASILICA
+
+
+
+def predict_user(user1_name, user2_name, tweet_text):
+
+    """Determine and return which user is more likely to say a given Tweet."""
+
+    user1 = User.query.filter(User.name == user1_name).one()
+
+    user2 = User.query.filter(User.name == user2_name).one()
+
+    user1_embeddings = np.array([tweet.embedding for tweet in user1.tweets])
+
+    user2_embeddings = np.array([tweet.embedding for tweet in user2.tweets])
+
+    embeddings = np.vstack([user1_embeddings, user2_embeddings])
+
+    labels = np.concatenate([np.ones(len(user1.tweets)),
+
+                             np.zeros(len(user2.tweets))])
+
+    log_reg = LogisticRegression().fit(embeddings, labels)
+
+    tweet_embedding = BASILICA.embed_sentence(tweet_text, model='twitter')
+
+    return log_reg.predict(np.array(tweet_embedding).reshape(1, -1))```
+
+
+then running app
+
+
+
+
+

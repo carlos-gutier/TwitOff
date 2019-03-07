@@ -1,0 +1,233 @@
+API - 
+Application Programming Interface
+the GUI of your system is an API - An Interface - methods signatures -
+things they take and things they return.
+
+In our case we make a request and we depend on others for the return on
+our request - we get access to data.
+
+
+Routing and Templates:
+
+Routing
+(flask.pocoo.org/docs/1.0/quickstart/#routing)
+Routes are the rules that listen to a path and return a thing.
+@app route('/')
+
+You can:
+1. Capture a variable as URL - GET
+@app.route('/user/<username>')
+def show_user_profile(username:
+    return "User %s" % username
+takes a request and returns response - 
+
+2. Listen to a post request - REQUEST
+you put something there 
+- see POSTMAN - A tool that allows you to make post request to test your API
+
+
+Templates
+HTLM with curly tags
+Determine the overall layout - Title, Lists, ordered/unordered list
+These are mixed with Python
+
+JINJA
+(jina.pocoo.org/docs/2.10/)
+There's a convention to where you place your templates!
+Inside directory you make another directory you make another called template
+Then inside your HTLM file ("base" or "layout" named HTLM file)
+Here you:
+declare it's HTLM doc: <!DOCTYPE html>
+<htlm>
+    <title></title>
+<head></head>
+<body>
+    <h1>TwitOff</h1>
+    <p>Content</p>
+    <ul>
+         ** see how it uses user names from models.py **
+</body>
+<footer></footer>
+</html>
+
+How do we use this (template)?
+In "app.py" in route('/') instead of returning string
+from flask import render_templates
+from flask import request
+from .models import User (to use user name in 'base.html')
+
+insted of returning a string return render_template of the template:
+@app.route('/')
+def root():
+   users = user.query.all() # get all users
+   # below you pass those users to 'base.html'
+   "render_template('base.html', title='Home', users=users) 
+
+render_template knows to look in the directory for 'base.html' 
+
+__init__.py:
+Something we just create and edit once ONLY - to tell it to create an app and that's it!
+
+
+In app.py:
+configs:
+app.config['ENV'] = 'debug' # CHANGE BEFORE DEPLOYING - showing we're running in debug and it exposes more information/which you dont want in production
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS] = Flase # tells SQLALCHEMY to not track modifications
+
+
+
+
+APIs:
+developer.twitter.com <- get Keys and tokens 4 of them to authorize
+
+Tweepy - 
+Python library to interact with Twitter API
+you send requests and get responses
+*see Tweepy Docs!
+
+in your environment install: 
+Tweepy, 
+Basilica (simple API), 
+python-decouple (to interact with environment variables in .env file - like the keys for Twitter)
+
+.env file:
+.env also needs to be loaded
+(file in top level in directory next to .git ingnore)
+What do you put in it?
+Assigments, Variables and equals (=)
+To set all the secret things we need to set
+No white spaces around the "="
+
+
+in app.py:
+from decouple import config (after installing python decouple)
+
+Now change:
+app.config['SQLACHEMY_DATABASE_URI'] = config('DATABASE_URL') # which will load the value in .env ('sqlite:///...')
+-- later on the above will be a sqlposgres URL not sqlite
+
+Then change (no more in debug mode):
+app.config['ENV'] = config('ENV') # because we set an .env equal to development
+
+
+The natural pattern is to keep developing in one file as this one above (app.py)
+but then the file grows and becomes unmaintanable
+but advice from Aaron -> app.py should only have: Application, configuration, and routing logic
+
+
+So, to interact with Twitter:
+Make file 'twitter.py'
+
+This file will retrive tweets embeddings and persist in the database
+import basilica
+import tweepy
+from decouple import config
+from .models import DB, Tweet, User # importing Database (DB) and models from database (Tweet, User)
+
+How do we use tweepy?:
+Need a lot of steps for major services like Twitter
+Twitter wants to make sure we are who we say we are before it gives us access to data
+There are other API's that give access without authentication (IN SPRINT CHALLENGE!!!)
+
+(see quicksteps guide from Tweepy website!!!)
+
+*Get environment variables we set by:
+
+- Make Twitter Auth object (TWITTER_AUTH)
+that uses tweepy.OAuthHandler (open authentication standard)
+and this needs the 'TWITTER_CONSUMER_KEY', and needs the 'TWITTER_CONSUMER_SECRET'
+(both using the name of variable called in '.env') -- it's like loging into Twitter with your account
+
+- Need to set the access token
+
+- Make overall Twitter object (tweepy.API(...))
+
+- Add Basilica key --> BASILICA = basilica.Connection(config('BASILICA_KEY')) # BASILICA_KEY from '.env'
+
+
+
+TO INTERACTIVELY SEE WHAT WE HAVE NOW:
+In flask shell:
+
+- from twitoff.twitter import *
+- dir() # shows what we have
+- Tweet
+- User # User models
+- TWITTER # Twitter API object
+- BASILICA # Basilica connection
+
+** HOW DO WE USE THESE?
+
+- dir(TWITTER) # Here are functions we can use (many to interact with Twitter, create content, change settings)
+- twitter_user = TWITTER.get_user('austen') # making a user as a twitter user object - using "get_user" with the username
+- twitter_user # this gives us now a buch of fields of information about user
+- tweets = twitter_user.timeline() # need to excute timeline method to get tweets from user
+- tweets
+- len(tweets) # we get 20 tweets by default, but can ask for at most 200 at a time
+- tweets[0].text # looking at most recent tweet
+- tweets = twitter_user.timeline(count=200, exclude_replies=True, include_rts=False, tweet_mode='extended') #getting only posted tweets and tweet_mode gives us more than 140 characters
+- tweets[0].full_text # not '.text' anymore - but '.full_text' to get full tweet
+- tweets[0].full_text[0]
+- dir(tweets[0]) # things we can find out about that specific tweet, like 'tweets[0].created_at'
+- tweets[0].id # can be used to query Tweeter API for this specific tweet
+- embedding = BASILICA.embed_sentence(tweet_text, model='twitter') # telling basilica this is a tweet so it uses Neural Network trained for tweets so it performs better
+- embedding # gives a ton of numbers - a Python list of numbers, 768 dimensional
+
+
+NOW CHANGING OUR 'models.py':
+change for BigIntegers
+
+in class.User(DB.Model):
+- added 'newest_tweet_id' # will let keep track of most recent tweet - for newer tweets we can say give me newer than this
+
+in class Tweet(DB.Model):
+-change DB.Unicode(500) to increase text 
+- add 'embedding' # to get Blobs in sql 'PickleType' in SQLlAchemy library to save list of embedding blob
+
+
+In 'app.py':
+# drops everything and creates everything but DON'T LEAVE IN PUBLIC VERSION
+# if you want to leave it you can put a @app.loginrequired decorator for admins to reset data
+adding route @app.route('/reset') 
+
+
+NOW IN FLASK SHELL:
+from twittoff.twitter import *
+
+- twitter_user = TWITTER.get_user('austen')
+- tweets = twitter_user.timeline(count=200, exclude_replies=True, include_rts=False, tweet_mode='extended')
+- twitter_user.screen_name
+- db_user - User(c
+- embeddings = [BASILICA.embed_sentence(tweet.full_text, model='twitter') for tweet in tweets
+- db_tweets = []
+- for embedding, tweet in zip(embeddings, tweets):
+     db_tweets.append(id=tweet.id, text=tweet.full_text[:500], embedding=embedding)) #truncating to first 500char
+
+- db_tweets[0] # you get nice string display of tweet
+- db_tweets[0].id
+- db_tweets[0].embedding
+
+APPENDING TWEETS TO TABLE
+- DB.drop_all(0)
+- DB.create_all()
+- twitter_user = TWITTER.get_user('austen')
+- tweets = twitter_user.timeline(count=200, exclude_replies=True, include_rts=False, tweet_mode='extended')
+- db_user = User(id=twitter_user.id, name=twitter_user.screen_name, newest_tweet_id=[0].id)
+- for tweet in tweets:
+    embedding = BASILICA.embed_sentence(tweet.full_text, model='twitter')
+    db_tweet = TWEET(id=tweet.id, text=tweet.full_text[:500], embedding=embedding))
+    db_user.tweets.append(db_tweet)
+
+- DB.session.add(db_user)
+- DB.session.commit()
+
+exit
+
+Look in SQLite Browser
+
+
+
+
+
+
+
